@@ -16,12 +16,16 @@ let params = { ex:1, nz:0.5, dn:0, sz:5, sk:0.02 };
 let basePos;
 let time = 0;
 
-const canvas = document.getElementById('c');
-const statusEl = document.getElementById('status');
+let canvas, statusEl;
 
-init(); 
-animate(); 
-wireUI();
+// 로드 완료 후 시작 (THREE/DOM 준비 보장)
+window.addEventListener('DOMContentLoaded', () => {
+  canvas = document.getElementById('c');
+  statusEl = document.getElementById('status');
+  init();
+  animate();
+  wireUI();
+});
 
 function init(){
   renderer = new THREE.WebGLRenderer({canvas, antialias:true});
@@ -37,8 +41,8 @@ function init(){
 
   // Controls
   controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; 
-  controls.dampingFactor = 0.06; 
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
   controls.enablePan = false;
 
   // Light
@@ -66,26 +70,23 @@ function init(){
   geom.setAttribute('offset', new THREE.BufferAttribute(off,3));
 
   // Material
-  material = new THREE.PointsMaterial({ 
-    color:0xb0b7c3, 
-    size:params.sz, 
-    transparent:true, 
-    opacity:0.95, 
-    depthWrite:false 
+  material = new THREE.PointsMaterial({
+    color:0xb0b7c3, size:params.sz, transparent:true, opacity:0.95, depthWrite:false
   });
-  points = new THREE.Points(geom, material); 
+  points = new THREE.Points(geom, material);
   scene.add(points);
 
-  // Resize 이벤트는 마지막에만 등록
+  // Resize는 맨 마지막에만 등록 + 첫 호출
   window.addEventListener('resize', onResize);
-  onResize(); // 첫 실행 때 맞춤
+  onResize();
 }
 
 function onResize(){
-  if(!renderer || !camera) return; // 안전 가드
-  const w = innerWidth, h = innerHeight;
-  renderer.setSize(w,h,false);
-  camera.aspect = w/h; 
+  // ✅ 안전 가드: 준비 안됐으면 그냥 리턴
+  if (!renderer || !camera) return;
+  const w = innerWidth, h = innerHeight || 1; // h=0 보호
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
 
@@ -133,30 +134,19 @@ function wireUI(){
     try{
       const r = await fetch(window.EMO_API, {
         method: "POST",
-        headers: {"Content-Type" : "application/json"},
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ text })
       });
 
-      if (r.status === 503) { 
-        statusEl.textContent="모델 웜업 중… 잠시 후 다시"; 
-        return; 
-      }
+      if (r.status === 503) { statusEl.textContent="모델 웜업 중… 잠시 후 다시"; return; }
 
       const out = await r.json();
-      if (out?.error) { 
-        statusEl.textContent = `HF 오류: ${out.error}`; 
-        return; 
-      }
+      if (out?.error) { statusEl.textContent = `HF 오류: ${out.error}`; return; }
 
-      const arr = Array.isArray(out)
-        ? (Array.isArray(out[0]) ? out[0] : out)
-        : [];
+      const arr = Array.isArray(out) ? (Array.isArray(out[0]) ? out[0] : out) : [];
       const results = arr.map(x=>({label:x.label, score:x.score}));
 
-      if (!results.length){ 
-        statusEl.textContent="결과 없음"; 
-        return; 
-      }
+      if (!results.length){ statusEl.textContent="결과 없음"; return; }
 
       applyEmotionMix(results);
 
@@ -178,10 +168,7 @@ function applyEmotionMix(results){
   const mapped = results
     .map(r=>({key: LABEL_MAP[r.label] || "neutral", score: r.score||0}))
     .filter(r=>EMO[r.key]);
-  if(!mapped.length){ 
-    tweenTo(EMO.neutral,0.6); 
-    return; 
-  }
+  if(!mapped.length){ tweenTo(EMO.neutral,0.6); return; }
 
   const sum = mapped.reduce((s,r)=>s+r.score,0) || 1;
   const target = { c:[0,0,0], ex:0, nz:0, dn:0, sz:0, sk:0 };
