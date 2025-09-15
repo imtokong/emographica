@@ -13,7 +13,7 @@ const EMO = {
 /***** 2) three.js 기본 세팅 *****/
 let renderer, scene, camera, controls, points, geom, material;
 let params = { ex:1, nz:0.5, dn:0, sz:5, sk:0.02 };
-let basePos; // offs 제거
+let basePos;
 let time = 0;
 
 const canvas = document.getElementById('c');
@@ -24,8 +24,8 @@ init(); animate(); wireUI();
 function init(){
   renderer = new THREE.WebGLRenderer({canvas, antialias:true});
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-  onResize(); window.addEventListener('resize', onResize);
 
+  // Scene, Camera, Controls 먼저 생성
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x090b12, 0.0006);
 
@@ -59,9 +59,14 @@ function init(){
 
   material = new THREE.PointsMaterial({ color:0xb0b7c3, size:params.sz, transparent:true, opacity:0.95, depthWrite:false });
   points = new THREE.Points(geom, material); scene.add(points);
+
+  // Resize는 카메라 준비된 후 호출
+  onResize();
+  window.addEventListener('resize', onResize);
 }
 
 function onResize(){
+  if(!renderer || !camera) return; // 안전 가드
   const w=innerWidth, h=innerHeight;
   renderer.setSize(w,h,false);
   camera.aspect=w/h; camera.updateProjectionMatrix();
@@ -115,12 +120,9 @@ function wireUI(){
         body: JSON.stringify({ text })
       });
 
-      // cold start 시 503 가능
       if (r.status === 503) { statusEl.textContent="모델 웜업 중… 잠시 후 다시"; return; }
 
       const out = await r.json();
-
-      // HF 오류 메시지 직관적으로 노출
       if (out?.error) { statusEl.textContent = `HF 오류: ${out.error}`; return; }
 
       const arr = Array.isArray(out)
