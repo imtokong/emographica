@@ -1,0 +1,18 @@
+html, body { margin:0; height:100%; overflow:hidden; background:#0a0b10; color:#e9eaf2;
+  font-family: ui-sans-serif, system-ui, AppleSDGothicNeo, 'Segoe UI', Roboto, 'Noto Sans KR', Helvetica, Arial, sans-serif; }
+#c { position:fixed; inset:0; display:block; }
+
+#ui {
+  position:fixed; top:16px; left:16px; width:min(560px, 92vw);
+  background:rgba(10,12,18,0.6); backdrop-filter: blur(8px);
+  border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  z-index: 10;
+}
+#ui h1 { margin:4px 0 10px; font-size:18px; font-weight:700; }
+#input { width:100%; resize:vertical; background:#0f1120; color:#eef; border:1px solid #242641; border-radius:8px; padding:10px; }
+.row { display:flex; align-items:center; gap:12px; margin-top:8px; }
+button { cursor:pointer; border:1px solid #2a2d47; background:#1a1d32; color:#f1f1ff; padding:8px 14px; border-radius:8px; font-weight:700; }
+button:hover { background:#242853; }
+#status { font-size:13px; opacity:0.85; }
+.hint { margin:6px 2px 0; opacity:0.7; font-size:12px; }
