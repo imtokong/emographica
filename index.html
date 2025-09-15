@@ -1,22 +1,18 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <script>
-  window.EMO_API = "https://emographica-e4yb178zd-imtokongs-projects.vercel.app/api/emotion";
-  </script>
-  
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Emographica</title>
   <link rel="stylesheet" href="style.css"/>
 
   <!-- three.js & controls -->
-  <script defer src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script defer src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.146.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
 
   <!-- ✅ 프록시 API 주소: app.js에서 window.EMO_API 사용 -->
   <script defer>
-    window.EMO_API = "http://localhost:5174/api/emotion";
+    window.EMO_API = "https://emographica-e4yb178zd-imtokongs-projects.vercel.app/api/emotion";
   </script>
 
   <!-- 앱 로직 -->
@@ -37,4 +33,5 @@
 </body>
 
 </html>
+
 
