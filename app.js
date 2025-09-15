@@ -18,8 +18,8 @@ let time = 0;
 
 let canvas, statusEl;
 
-// 로드 완료 후 시작 (THREE/DOM 준비 보장)
-window.addEventListener('DOMContentLoaded', () => {
+// ✅ 페이지 로드 후 실행
+window.addEventListener("load", () => {
   canvas = document.getElementById('c');
   statusEl = document.getElementById('status');
   init();
@@ -31,25 +31,20 @@ function init(){
   renderer = new THREE.WebGLRenderer({canvas, antialias:true});
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
 
-  // Scene
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x090b12, 0.0006);
 
-  // Camera
   camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
   camera.position.set(0,0,180);
 
-  // Controls
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.enablePan = false;
 
-  // Light
   const hemi = new THREE.HemisphereLight(0x3344ff, 0x100806, 0.6);
   scene.add(hemi);
 
-  // Geometry
   const count = 14000;
   geom = new THREE.BufferGeometry();
   const pos = new Float32Array(count*3);
@@ -69,22 +64,20 @@ function init(){
   geom.setAttribute('position', new THREE.BufferAttribute(pos,3));
   geom.setAttribute('offset', new THREE.BufferAttribute(off,3));
 
-  // Material
   material = new THREE.PointsMaterial({
     color:0xb0b7c3, size:params.sz, transparent:true, opacity:0.95, depthWrite:false
   });
   points = new THREE.Points(geom, material);
   scene.add(points);
 
-  // Resize는 맨 마지막에만 등록 + 첫 호출
+  // 👇 이제 안전하게 실행
   window.addEventListener('resize', onResize);
   onResize();
 }
 
 function onResize(){
-  // ✅ 안전 가드: 준비 안됐으면 그냥 리턴
-  if (!renderer || !camera) return;
-  const w = innerWidth, h = innerHeight || 1; // h=0 보호
+  if (!renderer || !camera) return; // 안전 가드
+  const w = innerWidth, h = innerHeight || 1;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
@@ -204,3 +197,4 @@ function tweenTo(target, dur=0.6){
 
 function lerp(a,b,t){ return a+(b-a)*t; }
 function hexToRgb(hex){ return { r:(hex>>16)&255, g:(hex>>8)&255, b:hex&255 }; }
+
