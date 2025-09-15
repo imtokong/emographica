@@ -37,6 +37,7 @@ function init(){
   camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
   camera.position.set(0,0,180);
 
+  // ✅ OrbitControls (UMD 버전)
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
@@ -70,13 +71,12 @@ function init(){
   points = new THREE.Points(geom, material);
   scene.add(points);
 
-  // 👇 이제 안전하게 실행
   window.addEventListener('resize', onResize);
   onResize();
 }
 
 function onResize(){
-  if (!renderer || !camera) return; // 안전 가드
+  if (!renderer || !camera) return; 
   const w = innerWidth, h = innerHeight || 1;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
@@ -112,7 +112,7 @@ function animate(){
 
   material.size = params.sz;
   camera.position.x += (Math.random()-0.5)*params.sk;
-  camera.position.y += (Math.random()-0.5)*params.sk; // 미세 흔들림
+  camera.position.y += (Math.random()-0.5)*params.sk; 
   controls.update();
   renderer.render(scene, camera);
 }
@@ -197,4 +197,3 @@ function tweenTo(target, dur=0.6){
 
 function lerp(a,b,t){ return a+(b-a)*t; }
 function hexToRgb(hex){ return { r:(hex>>16)&255, g:(hex>>8)&255, b:hex&255 }; }
-
