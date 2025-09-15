@@ -1,7 +1,7 @@
 /***** 1) 라벨 매핑 & 감정 스타일 *****/
 const LABEL_MAP = { "행복":"joy","분노":"anger","슬픔":"sadness","혐오":"disgust","공포":"anxiety","놀람":"surprise","중립":"neutral" };
 const EMO = {
-  joy:{c:[255,217,61], ex:1.25, nz:0.35, dn:0.00, sz:6.0, sk:0.02},
+  joy:{c:[255,217,61],  ex:1.25, nz:0.35, dn:0.00, sz:6.0, sk:0.02},
   anger:{c:[255,59,48], ex:1.55, nz:0.85, dn:0.00, sz:7.0, sk:0.07},
   sadness:{c:[90,163,255], ex:0.75, nz:0.25, dn:0.40, sz:5.0, sk:0.01},
   anxiety:{c:[161,140,255], ex:1.00, nz:1.20, dn:0.10, sz:4.0, sk:0.05},
@@ -37,7 +37,7 @@ function init(){
   camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
   camera.position.set(0,0,180);
 
-  // ✅ OrbitControls (UMD 버전)
+  // ✅ OrbitControls (UMD 전역)
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
@@ -117,43 +117,64 @@ function animate(){
   renderer.render(scene, camera);
 }
 
-/***** 3) UI & Vercel API 호출 *****/
+/***** 3) UI & Vercel API 호출 (에러 가독화 패치 반영) *****/
 function wireUI(){
-  document.getElementById('analyzeBtn').addEventListener('click', async ()=>{
-    const text = document.getElementById('input').value.trim();
-    if (!text){ statusEl.textContent="텍스트를 입력해주세요"; return; }
-    statusEl.textContent="분석 중…";
+  document.getElementById('analyzeBtn').addEventListener('click', analyzeOnce);
+}
 
-    try{
-      const r = await fetch(window.EMO_API, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ text })
-      });
+async function analyzeOnce(){
+  const text = document.getElementById('input').value.trim();
+  if (!text){ statusEl.textContent="텍스트를 입력해주세요"; return; }
+  statusEl.textContent="분석 중…";
 
-      if (r.status === 503) { statusEl.textContent="모델 웜업 중… 잠시 후 다시"; return; }
+  try{
+    const r = await fetch(window.EMO_API, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ text })
+    });
 
-      const out = await r.json();
-      if (out?.error) { statusEl.textContent = `HF 오류: ${out.error}`; return; }
+    // (HF 대비 잔재) 503 핸들링
+    if (r.status === 503) { statusEl.textContent="모델 웜업 중… 잠시 후 다시"; return; }
 
-      const arr = Array.isArray(out) ? (Array.isArray(out[0]) ? out[0] : out) : [];
-      const results = arr.map(x=>({label:x.label, score:x.score}));
-
-      if (!results.length){ statusEl.textContent="결과 없음"; return; }
-
-      applyEmotionMix(results);
-
-      const labelStr = results
-        .sort((a,b)=>b.score-a.score)
-        .slice(0,3)
-        .map(x=>`${x.label} ${Math.round(x.score*100)}%`)
-        .join(" · ");
-      statusEl.textContent = `감정: ${labelStr}`;
-    }catch(e){
-      console.error(e);
-      statusEl.textContent = "네트워크/서버 오류";
+    // JSON 파싱 시도, 실패하면 텍스트로 로깅
+    let out;
+    try {
+      out = await r.json();
+    } catch {
+      const txt = await r.text().catch(()=> "");
+      statusEl.textContent = `오류(${r.status}): 서버가 JSON이 아닌 응답을 보냈어요`;
+      console.log("Non-JSON response:", txt);
+      return;
     }
-  });
+
+    // 에러 페이로드 사람이 읽게 가공
+    if (!r.ok || out?.error) {
+      const err = out?.error;
+      const msg =
+        typeof err === "string" ? err :
+        err?.message || err?.code || out?.message || `${r.status} ${r.statusText}`;
+      statusEl.textContent = `오류: ${msg}`;
+      console.log("Server error payload:", out);
+      return;
+    }
+
+    // ✅ HF 스타일 배열 파싱 (서버가 [{label, score} x7]로 보내줌)
+    const arr = Array.isArray(out) ? (Array.isArray(out[0]) ? out[0] : out) : [];
+    if (!arr.length){ statusEl.textContent="결과 없음"; return; }
+
+    applyEmotionMix(arr);
+
+    const labelStr = arr
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,3)
+      .map(x=>`${x.label} ${Math.round(x.score*100)}%`)
+      .join(" · ");
+    statusEl.textContent = `감정: ${labelStr}`;
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = "네트워크/서버 오류";
+  }
 }
 
 /***** 4) 칵테일 혼합 *****/
