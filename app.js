@@ -19,25 +19,33 @@ let time = 0;
 const canvas = document.getElementById('c');
 const statusEl = document.getElementById('status');
 
-init(); animate(); wireUI();
+init(); 
+animate(); 
+wireUI();
 
 function init(){
   renderer = new THREE.WebGLRenderer({canvas, antialias:true});
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
 
-  // Scene, Camera, Controls 먼저 생성
+  // Scene
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x090b12, 0.0006);
 
+  // Camera
   camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
   camera.position.set(0,0,180);
 
+  // Controls
   controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; controls.dampingFactor = 0.06; controls.enablePan = false;
+  controls.enableDamping = true; 
+  controls.dampingFactor = 0.06; 
+  controls.enablePan = false;
 
+  // Light
   const hemi = new THREE.HemisphereLight(0x3344ff, 0x100806, 0.6);
   scene.add(hemi);
 
+  // Geometry
   const count = 14000;
   geom = new THREE.BufferGeometry();
   const pos = new Float32Array(count*3);
@@ -57,19 +65,28 @@ function init(){
   geom.setAttribute('position', new THREE.BufferAttribute(pos,3));
   geom.setAttribute('offset', new THREE.BufferAttribute(off,3));
 
-  material = new THREE.PointsMaterial({ color:0xb0b7c3, size:params.sz, transparent:true, opacity:0.95, depthWrite:false });
-  points = new THREE.Points(geom, material); scene.add(points);
+  // Material
+  material = new THREE.PointsMaterial({ 
+    color:0xb0b7c3, 
+    size:params.sz, 
+    transparent:true, 
+    opacity:0.95, 
+    depthWrite:false 
+  });
+  points = new THREE.Points(geom, material); 
+  scene.add(points);
 
-  // Resize는 카메라 준비된 후 호출
-  onResize();
+  // Resize 이벤트는 마지막에만 등록
   window.addEventListener('resize', onResize);
+  onResize(); // 첫 실행 때 맞춤
 }
 
 function onResize(){
   if(!renderer || !camera) return; // 안전 가드
-  const w=innerWidth, h=innerHeight;
+  const w = innerWidth, h = innerHeight;
   renderer.setSize(w,h,false);
-  camera.aspect=w/h; camera.updateProjectionMatrix();
+  camera.aspect = w/h; 
+  camera.updateProjectionMatrix();
 }
 
 function animate(){
@@ -120,17 +137,26 @@ function wireUI(){
         body: JSON.stringify({ text })
       });
 
-      if (r.status === 503) { statusEl.textContent="모델 웜업 중… 잠시 후 다시"; return; }
+      if (r.status === 503) { 
+        statusEl.textContent="모델 웜업 중… 잠시 후 다시"; 
+        return; 
+      }
 
       const out = await r.json();
-      if (out?.error) { statusEl.textContent = `HF 오류: ${out.error}`; return; }
+      if (out?.error) { 
+        statusEl.textContent = `HF 오류: ${out.error}`; 
+        return; 
+      }
 
       const arr = Array.isArray(out)
         ? (Array.isArray(out[0]) ? out[0] : out)
         : [];
       const results = arr.map(x=>({label:x.label, score:x.score}));
 
-      if (!results.length){ statusEl.textContent="결과 없음"; return; }
+      if (!results.length){ 
+        statusEl.textContent="결과 없음"; 
+        return; 
+      }
 
       applyEmotionMix(results);
 
@@ -152,7 +178,10 @@ function applyEmotionMix(results){
   const mapped = results
     .map(r=>({key: LABEL_MAP[r.label] || "neutral", score: r.score||0}))
     .filter(r=>EMO[r.key]);
-  if(!mapped.length){ tweenTo(EMO.neutral,0.6); return; }
+  if(!mapped.length){ 
+    tweenTo(EMO.neutral,0.6); 
+    return; 
+  }
 
   const sum = mapped.reduce((s,r)=>s+r.score,0) || 1;
   const target = { c:[0,0,0], ex:0, nz:0, dn:0, sz:0, sk:0 };
