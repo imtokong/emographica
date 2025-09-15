@@ -23,7 +23,7 @@ export default async function handler(req, res) {
         temperature: 0,
 
         // 스키마: 7개 라벨의 배열 형태를 강제
-        response_format: {
+        text.format: {
           type: "json_schema",
           json_schema: {
             name: "KoEmotionHFArray",
