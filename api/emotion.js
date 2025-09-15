@@ -1,6 +1,6 @@
-// /api/emotion.js  — Node 22, ESM ("type":"module")
+// /api/emotion.js — Node 22, ESM ("type":"module")
 export default async function handler(req, res) {
-  // CORS (배포 후 * 대신 프런트 도메인으로 제한 추천)
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -20,28 +20,34 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        // Structured Outputs를 공식 지원하는 모델 권장
         model: "gpt-4o-mini-2024-07-18",
         temperature: 0,
 
-        // ✅ 여기! response_format → text.format 로 이동
+        // ✅ 최상위 object 스키마 + 내부 emotions 배열(7개)
         text: {
           format: {
             type: "json_schema",
-            name: "KoEmotionHFArray",
+            name: "KoEmotionHFObject",
             strict: true,
             schema: {
-              type: "array",
-              minItems: 7,
-              maxItems: 7,
-              items: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  label: { type: "string", enum: LABELS },
-                  score: { type: "number", minimum: 0, maximum: 1 }
-                },
-                required: ["label","score"]
+              type: "object",
+              additionalProperties: false,
+              required: ["emotions"],
+              properties: {
+                emotions: {
+                  type: "array",
+                  minItems: 7,
+                  maxItems: 7,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["label","score"],
+                    properties: {
+                      label: { type: "string", enum: LABELS },
+                      score: { type: "number", minimum: 0, maximum: 1 }
+                    }
+                  }
+                }
               }
             }
           }
@@ -53,54 +59,58 @@ export default async function handler(req, res) {
             content: "너는 한국어 감정 분류기다. 반드시 JSON(스키마 준수)만 반환한다. 설명 금지." },
 
           { role: "user", content: JSON.stringify({ text: "진짜 열받네, 또 이런 식이야?" }) },
-          { role: "assistant", content: JSON.stringify([
-            {"label":"공포","score":0.02},{"label":"놀람","score":0.03},{"label":"분노","score":0.78},
-            {"label":"슬픔","score":0.06},{"label":"중립","score":0.05},{"label":"행복","score":0.02},{"label":"혐오","score":0.04}
-          ])},
+          { role: "assistant", content: JSON.stringify({
+            emotions: [
+              {"label":"공포","score":0.02},{"label":"놀람","score":0.03},{"label":"분노","score":0.78},
+              {"label":"슬픔","score":0.06},{"label":"중립","score":0.05},{"label":"행복","score":0.02},{"label":"혐오","score":0.04}
+            ]
+          })},
 
           { role: "user", content: JSON.stringify({ text: "너무 행복하고 설렌다!" }) },
-          { role: "assistant", content: JSON.stringify([
-            {"label":"공포","score":0.01},{"label":"놀람","score":0.06},{"label":"분노","score":0.01},
-            {"label":"슬픔","score":0.01},{"label":"중립","score":0.07},{"label":"행복","score":0.80},{"label":"혐오","score":0.04}
-          ])},
+          { role: "assistant", content: JSON.stringify({
+            emotions: [
+              {"label":"공포","score":0.01},{"label":"놀람","score":0.06},{"label":"분노","score":0.01},
+              {"label":"슬픔","score":0.01},{"label":"중립","score":0.07},{"label":"행복","score":0.80},{"label":"혐오","score":0.04}
+            ]
+          })},
 
           { role: "user", content: JSON.stringify({ text: textInput }) }
         ],
 
-        metadata: { task: "ko_emotion_classification_hf_style_v3" }
+        metadata: { task: "ko_emotion_classification_hf_style_v4" }
       })
     });
 
-    // JSON 파싱 및 에러 핸들링
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = data?.error?.message || data?.message || r.statusText || "unknown_error";
       return res.status(r.status).json({ error: msg });
     }
 
-    // ---- 견고한 파서 ----
-    function tryExtractArray(d) {
+    // ---- 파싱: parsed(객체) 우선 → text → 최종 배열 뽑기 ----
+    function extractEmotions(d) {
       const c0 = d?.output?.[0]?.content?.[0];
 
-      // 일부 SDK/런타임은 parsed를 제공
-      if (c0 && typeof c0.parsed !== "undefined") return c0.parsed;
+      if (c0 && typeof c0.parsed !== "undefined") {
+        const obj = c0.parsed;
+        if (obj && Array.isArray(obj.emotions)) return obj.emotions;
+      }
 
-      // 일반적으로 text 필드에 JSON 문자열이 들어옴
       const txt = c0?.text ?? null;
       if (typeof txt === "string") {
         let s = txt.trim();
         if (s.startsWith("```")) {
           s = s.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "");
         }
-        const a = s.indexOf("[");
-        const b = s.lastIndexOf("]");
-        if (a !== -1 && b !== -1 && b > a) s = s.slice(a, b + 1);
-        try { return JSON.parse(s); } catch {}
+        try {
+          const obj = JSON.parse(s);
+          if (obj && Array.isArray(obj.emotions)) return obj.emotions;
+        } catch {}
       }
       return null;
     }
 
-    let arr = tryExtractArray(data);
+    let arr = extractEmotions(data);
     if (!Array.isArray(arr)) {
       return res.status(200).json({ error: "bad_model_output", raw: data });
     }
@@ -124,7 +134,7 @@ export default async function handler(req, res) {
       arr = LABELS.map(lab => ({ label: lab, score: map.get(lab) / sum }));
     }
 
-    // 🎯 HF 스타일 배열로 반환 → app.js가 그대로 사용
+    // 🎯 프런트(app.js)에서 기대하는 HF 스타일 배열로 반환
     return res.status(200).json(arr);
   } catch (e) {
     console.error(e);
