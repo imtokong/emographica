@@ -17,7 +17,31 @@
     #analyzeBtn{padding:10px 14px;border-radius:10px;border:none;background:#24a0ed;color:#fff;cursor:pointer}
     #status{position:fixed;left:16px;top:16px;opacity:.9;z-index:10}
   </style>
-</head>
+</head
+
+  <!-- 화면용 제목/설명 -->
+<div class="brand">
+  <h1>Emographica</h1>
+  <p class="tagline">
+    It classifies text into seven emotions (fear, surprise, anger, sadness, neutral, happiness, disgust)
+    and visualizes them with three.js.<br>
+    Made by Jua Im.
+  </p>
+</div>
+  
+<!-- 스타일: <style> 안에 추가하거나, style.css 에 넣어도 됩니다 -->
+<style>
+  .brand{
+    position:fixed; top:16px; right:16px; z-index:10; text-align:right;
+    max-width:min(60vw,600px);
+  }
+  .brand h1{ margin:0 0 6px 0; font-size:18px; font-weight:700; letter-spacing:.2px; }
+  .brand .tagline{ margin:0; opacity:.9; line-height:1.35; font-size:13px; }
+  @media (max-width:520px){
+    .brand{ left:16px; right:auto; text-align:left; }
+  }
+</style>
+
 <body>
   <canvas id="c"></canvas>
 
@@ -59,4 +83,5 @@
   <script src="app.js"></script>
 </body>
 </html>
+
 
