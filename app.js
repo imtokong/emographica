@@ -13,7 +13,8 @@ const EMO = {
 /***** 2) three.js 기본 세팅 *****/
 let renderer, scene, camera, controls, points, geom, material;
 let params = { ex:1, nz:0.5, dn:0, sz:5, sk:0.02 };
-let basePos, offs; let time=0;
+let basePos; // offs 제거
+let time = 0;
 
 const canvas = document.getElementById('c');
 const statusEl = document.getElementById('status');
@@ -52,7 +53,7 @@ function init(){
     off[i*3+1] = Math.random()*1000;
     off[i*3+2] = Math.random()*1000;
   }
-  basePos = pos.slice(0); offs = off;
+  basePos = pos.slice(0);
   geom.setAttribute('position', new THREE.BufferAttribute(pos,3));
   geom.setAttribute('offset', new THREE.BufferAttribute(off,3));
 
@@ -100,7 +101,7 @@ function animate(){
   renderer.render(scene, camera);
 }
 
-/***** 3) UI & HF 호출 *****/
+/***** 3) UI & Vercel API 호출 *****/
 function wireUI(){
   document.getElementById('analyzeBtn').addEventListener('click', async ()=>{
     const text = document.getElementById('input').value.trim();
@@ -112,26 +113,34 @@ function wireUI(){
         method: "POST",
         headers: {"Content-Type" : "application/json"},
         body: JSON.stringify({ text })
-
       });
 
       // cold start 시 503 가능
       if (r.status === 503) { statusEl.textContent="모델 웜업 중… 잠시 후 다시"; return; }
 
       const out = await r.json();
-      const arr = Array.isArray(out) && Array.isArray(out[0]) ? out[0] : out;
-      const results = (arr||[]).map(x=>({label:x.label, score:x.score}));
+
+      // HF 오류 메시지 직관적으로 노출
+      if (out?.error) { statusEl.textContent = `HF 오류: ${out.error}`; return; }
+
+      const arr = Array.isArray(out)
+        ? (Array.isArray(out[0]) ? out[0] : out)
+        : [];
+      const results = arr.map(x=>({label:x.label, score:x.score}));
 
       if (!results.length){ statusEl.textContent="결과 없음"; return; }
 
       applyEmotionMix(results);
 
-      const labelStr = results.sort((a,b)=>b.score-a.score).slice(0,3)
-        .map(x=>`${x.label} ${Math.round(x.score*100)}%`).join(" · ");
+      const labelStr = results
+        .sort((a,b)=>b.score-a.score)
+        .slice(0,3)
+        .map(x=>`${x.label} ${Math.round(x.score*100)}%`)
+        .join(" · ");
       statusEl.textContent = `감정: ${labelStr}`;
     }catch(e){
       console.error(e);
-      statusEl.textContent = "네트워크/CORS 오류";
+      statusEl.textContent = "네트워크/서버 오류";
     }
   });
 }
@@ -174,5 +183,6 @@ function tweenTo(target, dur=0.6){
   }
   requestAnimationFrame(step);
 }
+
 function lerp(a,b,t){ return a+(b-a)*t; }
 function hexToRgb(hex){ return { r:(hex>>16)&255, g:(hex>>8)&255, b:hex&255 }; }
