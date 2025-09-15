@@ -1,41 +1,42 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Emographica</title>
-  <link rel="stylesheet" href="style.css"/>
-
-  <!-- three.js & controls -->
-  <script src="https://unpkg.com/three@0.146.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
-
-  <!-- ✅ 프록시 API 주소: app.js에서 window.EMO_API 사용 -->
-  <script defer>
-    window.EMO_API = "https://emographica.vercel.app/api/emotion";
-  </script>
-
-  <!-- 앱 로직 -->
-  <script defer src="app.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* 없어도 되지만, 대충 보이게 간단 스타일 */
+    html,body{margin:0;height:100%;background:#0a0c13;color:#eee;font-family:system-ui,apple sd gothic neo,Segoe UI,Roboto;}
+    #c{display:block;position:fixed;inset:0;outline:none}
+    .ui{position:fixed;left:16px;bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    #input{width:min(60vw,540px);padding:10px 12px;border-radius:10px;border:1px solid #333;background:#121522;color:#eee}
+    #analyzeBtn{padding:10px 14px;border-radius:10px;border:none;background:#24a0ed;color:#fff;cursor:pointer}
+    #status{position:fixed;left:16px;top:16px;opacity:.9}
+  </style>
 </head>
 <body>
   <canvas id="c"></canvas>
 
-  <div id="ui">
-    <h1>Emographica</h1>
-    <textarea id="input" rows="3" placeholder="Text your emotional messages"></textarea>
-    <div class="row">
-      <button id="analyzeBtn">Convert</button>
-      <span id="status">Get ready</span>
-    </div>
-    <p class="hint">* 다중 감정(행복·분노·슬픔·혐오·공포·놀람·중립) 확률을 섞어 3D Artwork로 표현합니다.</p>
+  <div id="status">준비 완료</div>
+  <div class="ui">
+    <input id="input" placeholder="텍스트 입력" />
+    <button id="analyzeBtn">감정 변환</button>
   </div>
+
+  <!-- three.js & OrbitControls (UMD, 전역 THREE 제공) -->
+  <script src="https://unpkg.com/three@0.146.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- ✅ 환경별 API 엔드포인트 설정: app.js보다 먼저! -->
+  <script>
+    // GitHub Pages에서 열면 Vercel API로, Vercel에서 열면 같은 오리진으로
+    window.EMO_API = location.hostname.endsWith('github.io')
+      ? 'https://emographica.vercel.app/api/emotion'   // 필요 시 프리뷰 URL로 교체
+      : '/api/emotion';
+  </script>
+
+  <!-- 네 앱 로직 -->
+  <script src="app.js"></script>
 </body>
-
 </html>
-
-
-
-
-
-
